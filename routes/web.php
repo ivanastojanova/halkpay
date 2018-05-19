@@ -18,3 +18,5 @@ Route::get('/', function () {
 
 
 Route::get('/pay', 'PaymentController@index');
+
+Route::post('process','PaymentController@store');

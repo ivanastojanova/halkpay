@@ -58,7 +58,91 @@ class PaymentController extends Controller
      */
     public function store(Request $request)
     {
-        //
+
+        $requestParams = $request->all();
+
+        $storekey = config('app.storekey');
+        $mdStatus = $request->post('mdStatus');       //Result of the 3D Secure authentication. 1,2,3,4 are successful; 5,6,7,8,9,0 are unsuccessful.
+        $AuthCode = $request->post('AuthCode');
+        $Response = $request->post('Response');
+        $HostRefNum = $request->post('HostRefNum');
+        $ProcReturnCode = $request->post('ProcReturnCode');
+        $TransId = $request->post('TransId');
+        $ErrMsg = $request->post('ErrMsg');
+
+
+
+
+        $hashparams = $request->post("HASHPARAMS");
+        $hashparamsval = $request->post("HASHPARAMSVAL");
+        $hashparam = $request->post("HASH");
+
+
+
+
+
+        $paramsval="";
+        $index1=0;
+
+        while($index1 < strlen($hashparams))
+        {
+            $index2 = strpos($hashparams,":",$index1);
+            $vl_key = substr($hashparams,$index1,$index2- $index1);
+
+            $vl = $request->post($vl_key);
+
+            if($vl == null)
+                $vl = "";
+            $paramsval = $paramsval . $vl;
+            $index1 = $index2 + 1;
+        }
+        $hashval = $paramsval.$storekey;
+        $hash = base64_encode(pack('H*',sha1($hashval)));
+
+
+
+
+        $Message =  "Red: Hash values error. Please check parameters posted to 3D secure page.";
+
+        if ($hashparams != null)
+        {
+
+            $Message =  "Red: 3D authentication unsuccesful.";
+
+            if($mdStatus =="1" || $mdStatus == "2" || $mdStatus == "3" || $mdStatus == "4")
+            {
+                $Message = "Green: 3D Authentication is successful";
+            }
+
+
+            if($paramsval != $hashparamsval || $hashparam != $hash)
+            {
+                $Message = "Red: Security warning. Hash values mismatch.";
+            }
+        }
+
+
+        //Payment Result
+        $MessagePay = "Red: 3D Authentication is not successful";
+
+        if ($mdStatus =="1" || $mdStatus == "2" || $mdStatus == "3" || $mdStatus == "4")
+        {
+            $MessagePay = "Red: Your payment is not approved";
+
+            if ( $Response == "Approved")
+            {
+                $MessagePay =  "Green: Your payment is approved";
+            }
+
+        }
+
+
+
+
+
+
+        return view('payments.results', compact('Message','MessagePay','requestParams','AuthCode',
+            'Response','HostRefNum','ProcReturnCode','TransId','ErrMsg'));
     }
 
     /**
